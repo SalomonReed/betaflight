@@ -1099,6 +1099,16 @@ void processRxModes(timeUs_t currentTimeUs)
     }
 #endif
 
+#ifdef USE_TAKEOFF
+    if (IS_RC_MODE_ACTIVE(BOXTAKEOFF)) { // if (ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXTAKEOFF)) {
+        if (!FLIGHT_MODE(TAKEOFF_MODE)) {
+            ENABLE_FLIGHT_MODE(TAKEOFF_MODE);
+        }
+    } else {
+        DISABLE_FLIGHT_MODE(TAKEOFF_MODE);
+    }
+#endif
+
 #ifdef USE_CHIRP
     if (IS_RC_MODE_ACTIVE(BOXCHIRP) && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(GPS_RESCUE_MODE)) {
         if (!FLIGHT_MODE(CHIRP_MODE)) {
