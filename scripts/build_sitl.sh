@@ -1,0 +1,2 @@
+#!/bin/sh
+make TARGET=SITL EXTRA_FLAGS="-DUSE_TAKEOFF"
