@@ -30,6 +30,10 @@
 
 #define TARGET_BOARD_IDENTIFIER "SITL"
 
+// Gazebo bridge mode: derive barometric pressure from altitude
+// Gazebo plugin doesn't provide pressure data, so we calculate it from position
+#define ENABLE_GAZEBO_BRIDGE 1
+
 #define SIMULATOR_MULTITHREAD
 
 #define SYSTEM_HSE_MHZ 0

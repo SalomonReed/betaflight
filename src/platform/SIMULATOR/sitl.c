@@ -160,7 +160,16 @@ static void updateState(const fdm_packet* pkt)
 //    printf("[gyr]%lf,%lf,%lf\n", pkt->imu_angular_velocity_rpy[0], pkt->imu_angular_velocity_rpy[1], pkt->imu_angular_velocity_rpy[2]);
 
     // temperature in 0.01 C = 25 deg
-    virtualBaroSet(pkt->pressure, 2500);
+#if ENABLE_GAZEBO_BRIDGE
+    // Gazebo plugin doesn't fill pkt->pressure; derive from altitude using the
+    // standard atmosphere model: P = 101325 * (1 - 2.25577e-5 * h)^5.25588
+    const double altMeters = pkt->position_xyz[2];
+    const int32_t pressure = (int32_t)(101325.0 * pow(1.0 - 2.25577e-5 * altMeters, 5.25588));
+    virtualBaroSet(pressure, 2500);
+#else
+    // Legacy bridges (X-Plane, RealFlight) supply pressure directly in fdm_packet
+    virtualBaroSet((int32_t)pkt->pressure, 2500);
+#endif
 #if !defined(USE_IMU_CALC)
 #if defined(SET_IMU_FROM_EULER)
     // set from Euler
