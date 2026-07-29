@@ -26,6 +26,7 @@ AUX1 = 4  # Arm switch
 AUX2 = 5
 AUX3 = 6
 AUX4 = 7
+AUX5 = 8
 
 
 class UDPController:
@@ -33,9 +34,10 @@ class UDPController:
         self.host = host
         self.port = port
         self.sock = None
-        self.channels = [RC_MID] * 8
+        self.channels = [RC_MID] * 16  # 16 channels total
         self.channels[THROTTLE] = THROTTLE_MIN
         self.armed = False
+        self.aux_states = [False] * 5  # Track AUX1-AUX5 states
         self.connect()
     
     def connect(self):
@@ -55,8 +57,7 @@ class UDPController:
         
         timestamp = time.time()
         # Pack: double timestamp + 16 uint16_t channels
-        channels_padded = self.channels + [RC_MIN] * 8  # Pad to 16 channels
-        data = struct.pack('<d' + 'H' * 16, timestamp, *channels_padded)
+        data = struct.pack('<d' + 'H' * 16, timestamp, *self.channels)
         
         try:
             self.sock.sendto(data, (self.host, self.port))
@@ -69,13 +70,34 @@ class UDPController:
         """Arm the craft (AUX1 high)"""
         self.channels[AUX1] = RC_MAX
         self.armed = True
+        self.aux_states[0] = True
         print("ARMED")
     
     def disarm(self):
         """Disarm the craft (AUX1 low)"""
         self.channels[AUX1] = RC_MIN
         self.armed = False
+        self.aux_states[0] = False
         print("DISARMED")
+    
+    def toggle_aux(self, aux_num):
+        """Toggle AUX channel (1-5) between RC_MIN and RC_MAX"""
+        if aux_num < 1 or aux_num > 5:
+            return
+        
+        idx = aux_num - 1
+        channel_idx = AUX1 + idx
+        
+        if self.aux_states[idx]:
+            self.channels[channel_idx] = RC_MIN
+            self.aux_states[idx] = False
+        else:
+            self.channels[channel_idx] = RC_MAX
+            self.aux_states[idx] = True
+        
+        # Update armed state if AUX1 was toggled
+        if aux_num == 1:
+            self.armed = self.aux_states[0]
     
     def adjust_throttle(self, delta):
         """Adjust throttle value"""
@@ -102,11 +124,12 @@ class UDPController:
     
     def print_status(self):
         """Print current channel values"""
+        aux_str = " ".join([f"{i+1}:{'H' if self.aux_states[i] else 'L'}" for i in range(5)])
         print(f"\rTHR:{self.channels[THROTTLE]:4d} "
               f"YAW:{self.channels[YAW]:4d} "
               f"PIT:{self.channels[PITCH]:4d} "
               f"ROL:{self.channels[ROLL]:4d} "
-              f"AUX1:{'ARM' if self.armed else 'DISARM':7s}", 
+              f"AUX:[{aux_str}]", 
               end='', flush=True)
     
     def close(self):
@@ -147,7 +170,8 @@ def main():
     print("  A/D     - Yaw left/right")
     print("  ↑/↓     - Pitch forward/back")
     print("  ←/→     - Roll left/right")
-    print("  Space   - Arm/Disarm toggle")
+    print("  Space   - Arm/Disarm toggle (AUX1)")
+    print("  1-5     - Toggle AUX1-AUX5")
     print("  C       - Center sticks")
     print("  Q       - Quit")
     print("=" * 40)
@@ -174,15 +198,17 @@ def main():
                 elif key == 'd' or key == 'D':
                     controller.adjust_yaw(50)
                 elif key == '\x1b[A':  # Up arrow
-                    controller.adjust_pitch(-50)
-                elif key == '\x1b[B':  # Down arrow
                     controller.adjust_pitch(50)
+                elif key == '\x1b[B':  # Down arrow
+                    controller.adjust_pitch(-50)
                 elif key == '\x1b[D':  # Left arrow
                     controller.adjust_roll(-50)
                 elif key == '\x1b[C':  # Right arrow
                     controller.adjust_roll(50)
                 elif key == 'c' or key == 'C':
                     controller.center_sticks()
+                elif key in '12345':
+                    controller.toggle_aux(int(key))
             
             controller.send_rc()
             controller.print_status()

@@ -1,0 +1,31 @@
+# version
+# Betaflight / SITL (SITL) 2025.12.6 Jul 28 2026 / 15:23:49 (norevision) MSP API: 1.47
+
+# start the command batch
+batch start
+
+
+# feature
+feature -GPS
+feature -TELEMETRY
+
+# serial
+serial UART2 1 115200 57600 0 115200
+
+# aux
+aux 0 0 0 1700 2100 0 0
+aux 1 1 3 1700 2100 0 0
+aux 2 3 4 1700 2100 0 0
+aux 3 56 2 900 1300 0 0
+
+# master
+set ap_hover_throttle = 1600
+
+profile 0
+
+rateprofile 0
+
+# end the command batch
+batch end
+
+# 

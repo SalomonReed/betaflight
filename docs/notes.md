@@ -37,3 +37,48 @@ Allowed range: 0 - 5
 https://betaflight.com/docs/development/autopilot/SITL_Autopilot_Testing_Gazebo
 На прошивке 2025.12.5 не получалось сделать арм, нужно было починить barometer.c:
 https://github.com/betaflight/betaflight/discussions/13683
+
+
+Настройка Betaloop
+Создайте config.txt файл в указанной betaloopдиректории:
+
+[Betaloop]
+AeroloopGazeboHome=~/aeroloop_gazebo
+World=betaloop_iris_betaflight_demo_harmonic.sdf
+BetaflightElf=/path/to/betaflight/obj/main/betaflight_SITL.elf
+
+Порядок запуска сима:
+
+cd ~/betaloop
+python3 start.py --gazebo
+
+
+В sdf нужно было уменьшить max_step_size до 0.0025 и меньше.
+<!-- Physics settings -->
+<physics name="realtime" type="ignored">
+    <real_time_factor>1</real_time_factor>
+    <max_step_size>0.001</max_step_size>
+</physics>
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Ubuntu 24.04 Host                            │
+│                                                                      │
+│  ┌────────────────────┐       UDP        ┌────────────────────────┐  │
+│  │  Betaflight SITL   │◄────────────────►│   Gazebo Harmonic      │  │
+│  │  (betaflight_SITL  │  9002: PWM out   │                        │  │
+│  │       .elf)        │  9003: FDM in    │  ┌──────────────────┐  │  │
+│  │                    │  9004: RC in     │  │  Quadcopter      │  │  │
+│  │ ┌────────────────┐ │                  │  │  Model + Plugin  │  │  │
+│  │ │ Autopilot      │ │                  │  └──────────────────┘  │  │
+│  │ │ - Waypoints    │ │                  │                        │  │
+│  │ │ - Pos Control  │ │                  │  ┌──────────────────┐  │  │
+│  │ │ - L1 Guidance  │ │                  │  │  World Physics   │  │  │
+│  │ │ - Landing      │ │                  │  │  (ODE/Bullet)    │  │  │
+│  │ └────────────────┘ │                  │  └──────────────────┘  │  │
+│  └──────┬─────────────┘                  └────────────────────────┘  │
+│         │ TCP :5761                                                   │
+│  ┌──────▼─────────────┐                                              │
+│  │  Betaflight App    │                                              │
+│  │  (Configurator)    │                                              │
+│  └────────────────────┘                                              │
+└──────────────────────────────────────────────────────────────────────┘
