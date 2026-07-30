@@ -60,6 +60,7 @@
 #include "flight/pid.h"
 #include "flight/position.h"
 #include "flight/pos_hold.h"
+#include "flight/takeoff.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
@@ -401,6 +402,10 @@ task_attribute_t task_attributes[TASK_COUNT] = {
     [TASK_POSHOLD] = DEFINE_TASK("POSHOLD", NULL, NULL, updatePosHold, TASK_PERIOD_HZ(POSHOLD_TASK_RATE_HZ), TASK_PRIORITY_LOW),
 #endif
 
+#ifdef USE_TAKEOFF
+    [TASK_TAKEOFF] = DEFINE_TASK("TAKEOFF", NULL, NULL, updateTakeoff, TASK_PERIOD_HZ(TAKEOFF_TASK_RATE_HZ), TASK_PRIORITY_LOW),
+#endif
+
 #ifdef USE_MAG
     [TASK_COMPASS] = DEFINE_TASK("COMPASS", NULL, NULL, taskUpdateMag, TASK_PERIOD_HZ(TASK_COMPASS_RATE_HZ), TASK_PRIORITY_LOW),
 #endif
@@ -573,6 +578,11 @@ void tasksInit(void)
 
 #ifdef USE_POSITION_HOLD
     setTaskEnabled(TASK_POSHOLD, featureIsEnabled(FEATURE_GPS));
+#endif
+
+#ifdef USE_TAKEOFF
+    setTaskEnabled(TASK_TAKEOFF, sensors(SENSOR_BARO) || featureIsEnabled(FEATURE_GPS));
+    takeoffInit();
 #endif
 
 #ifdef USE_MAG

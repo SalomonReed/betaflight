@@ -8,6 +8,7 @@ PG_SRC = \
             pg/beeper_dev.c \
             pg/board.c \
             pg/bus_i2c.c \
+            pg/takeoff.c \
             pg/bus_quadspi.c \
             pg/bus_spi.c \
             pg/dashboard.c \
@@ -175,6 +176,7 @@ COMMON_SRC = \
             flight/rpm_filter.c \
             flight/servos.c \
             flight/servos_tricopter.c \
+            flight/takeoff.c \
             io/serial_4way.c \
             io/serial_4way_avrootloader.c \
             io/serial_4way_stk500v2.c \

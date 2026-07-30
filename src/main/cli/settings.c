@@ -113,6 +113,7 @@
 #include "pg/rcdevice.h"
 #include "pg/stats.h"
 #include "pg/board.h"
+#include "pg/takeoff.h"
 
 #include "rx/a7105_flysky.h"
 #include "rx/cc2500_frsky_common.h"
@@ -1205,6 +1206,11 @@ const clivalue_t valueTable[] = {
     { PARAM_NAME_POS_HOLD_DEADBAND,    VAR_UINT8 | MASTER_VALUE, .config.minmaxUnsigned = { 0, 50 }, PG_POSHOLD_CONFIG, offsetof(posHoldConfig_t, deadband) },
 #endif // !USE_WING
 #endif // USE_POSITION_HOLD
+
+#ifdef USE_TAKEOFF
+    { "takeoff_altitude_m",          VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 1, 200 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, takeoffAltitudeM) },
+    { "takeoff_climb_rate_cm_s",     VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 50, 10000 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, climbRateCmS) },
+#endif // USE_TAKEOFF
 
 // PG_PID_CONFIG
     { PARAM_NAME_PID_PROCESS_DENOM, VAR_UINT8  | MASTER_VALUE,  .config.minmaxUnsigned = { 1, MAX_PID_PROCESS_DENOM }, PG_PID_CONFIG, offsetof(pidConfig_t, pid_process_denom) },

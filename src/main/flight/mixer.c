@@ -48,6 +48,7 @@
 #include "flight/alt_hold.h"
 #include "flight/autopilot.h"
 #include "flight/failsafe.h"
+#include "flight/takeoff.h"
 #include "flight/gps_rescue.h"
 #include "flight/imu.h"
 #include "flight/mixer_init.h"
@@ -808,6 +809,13 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
 #ifdef USE_ALTITUDE_HOLD
     // Throttle value to be used during altitude hold mode (and failsafe landing mode)
     if (FLIGHT_MODE(ALT_HOLD_MODE)) {
+        throttle = getAutopilotThrottle();
+    }
+#endif
+
+#ifdef USE_TAKEOFF
+    // Throttle value to be used during takeoff mode
+    if (isTakeoffActive()) {
         throttle = getAutopilotThrottle();
     }
 #endif
