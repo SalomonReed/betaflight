@@ -97,7 +97,7 @@ def main():
     print("  debug[0]: current velocity (cm/s)")
     print("  debug[1]: throttle percentage (0-100)")
     print("  debug[2]: target altitude (m)")
-    print("  debug[3]: climb rate setting (cm/s)")
+    print("  debug[3]: current target altitude (cm)")
     print("  debug[4]: state (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)")
     print("Press Ctrl+C to stop\n")
     
@@ -114,8 +114,8 @@ def main():
                 sys.stdout.write("\r" + " " * 80 + "\r")
                 print(f"VEL:{debug_values[0]:5d} cm/s  "
                       f"THR:{debug_values[1]:3d}%  "
-                      f"ALT:{debug_values[2]:3d}m  "
-                      f"RATE:{debug_values[3]:3d} cm/s  "
+                      f"TARGET:{debug_values[2]:3d}m  "
+                      f"CURR_TARGET:{debug_values[3]:5d}cm  "
                       f"STATE:{state_name}", end='')
                 sys.stdout.flush()
             

@@ -23,7 +23,7 @@
 
 typedef struct takeoffConfig_s {
     uint16_t takeoffAltitudeM;    // Target altitude in meters (default: 20m)
-    uint16_t climbRateCmS;        // Climb rate in cm/s (default: 200 cm/s = 2 m/s)
+    uint16_t climbRateCmS;        // Climb rate: 50 means 5 m/s (same format as alt_hold)
 } takeoffConfig_t;
 
 PG_DECLARE(takeoffConfig_t, takeoffConfig);

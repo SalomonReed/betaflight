@@ -43,14 +43,44 @@ https://github.com/betaflight/betaflight/discussions/13683
 Создайте config.txt файл в указанной betaloopдиректории:
 
 [Betaloop]
-AeroloopGazeboHome=~/aeroloop_gazebo
+AeroloopGazeboHome=/home/orion/work/aeroloop_gazebo
 World=betaloop_iris_betaflight_demo_harmonic.sdf
-BetaflightElf=/path/to/betaflight/obj/main/betaflight_SITL.elf
+BetaflightElf=/home/orion/work/betaflight/obj/main/betaflight_SITL.elf
+DisableWebsockify=True
 
-Порядок запуска сима:
 
-cd ~/betaloop
+Порядок запуска сима в разных терминалах:
+
+1) cd ~/work/betaloop/
 python3 start.py --gazebo
+
+2) websockify 127.0.0.1:6761 127.0.0.1:5761
+3) cd ~/work/betaflight/obj/main
+./betaflight_SITL.elf
+4) cd ~/work/betaflight/scripts/
+./sitl_udp_controller.py
+
+
+Рекомендации по использованию
+Скрипт для удобного запуска
+#!/bin/bash
+# sitl.sh
+pkill -9 -f betaflight_SITL 2>/dev/null
+sleep 1
+./obj/main/betaflight_SITL.elf "$@" &
+sleep 1
+echo "SITL started, UART1 on port 5761"
+Если порт всё ещё занят
+# Проверить кто занимает порт
+lsof -i :5761
+
+# Убить процесс занимающий порт
+fuser -k 5761/tcp
+
+# Или убить все процессы betaflight
+pkill -9 -f betaflight_SITL
+Проверка работы
+После запуска SITL попробуйте подключиться несколько раз подряд - теперь порт должен освобождаться корректно между подключениями.
 
 
 В sdf нужно было уменьшить max_step_size до 0.0025 и меньше.
