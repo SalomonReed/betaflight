@@ -50,6 +50,7 @@ typedef struct {
     float targetAltitudeCm;
     float climbRate;
     bool throttleRaised;
+    float throttleOutput;
 } takeoff_t;
 
 static takeoff_t takeoffState;
@@ -120,6 +121,9 @@ static void takeoffUpdate(void)
         // Holding at target altitude
         altitudeControl(takeoffState.targetAltitudeCm, taskIntervalSeconds, 0.0f);
     }
+    
+    // Сохраняем текущее значение throttle
+    takeoffState.throttleOutput = getAutopilotThrottle();
 }
 
 void updateTakeoff(timeUs_t currentTimeUs)
@@ -127,6 +131,18 @@ void updateTakeoff(timeUs_t currentTimeUs)
     UNUSED(currentTimeUs);
     
     takeoffProcessTransitions();
+
+    // Debug output - always update regardless of state
+    // debug[0]: current velocity (cm/s)
+    // debug[1]: throttle percentage (0-100)
+    // debug[2]: target altitude (m)
+    // debug[3]: climb rate setting (value * 10 = cm/s, e.g. 50 = 5 m/s)
+    // debug[4]: takeoff state (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+    DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeDerivative()));
+    DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.throttleOutput * 100.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffConfig()->takeoffAltitudeM);
+    DEBUG_SET(DEBUG_TAKEOFF, 3, takeoffConfig()->climbRateCmS);
+    // DEBUG_SET(DEBUG_TAKEOFF, 4, takeoffState.state);
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();

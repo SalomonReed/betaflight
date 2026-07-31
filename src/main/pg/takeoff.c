@@ -27,7 +27,7 @@ PG_REGISTER_WITH_RESET_TEMPLATE(takeoffConfig_t, takeoffConfig, PG_TAKEOFF_CONFI
 
 PG_RESET_TEMPLATE(takeoffConfig_t, takeoffConfig,
     .takeoffAltitudeM = 20,      // 20 meters target altitude
-    .climbRateCmS = 200,         // 200 cm/s = 2 m/s climb rate
+    .climbRateCmS = 50,          // 50 means 5 m/s climb rate (same format as alt_hold)
 );
 
 #endif // USE_TAKEOFF
