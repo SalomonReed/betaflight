@@ -817,6 +817,9 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     // Throttle value to be used during takeoff mode
     if (isTakeoffActive()) {
         throttle = getAutopilotThrottle();
+    } else if (FLIGHT_MODE(TAKEOFF_MODE)) {
+        // Takeoff mode active but takeoff not started yet - block throttle from stick
+        throttle = 0.0f;
     }
 #endif
 
