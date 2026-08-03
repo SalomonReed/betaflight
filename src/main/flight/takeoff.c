@@ -50,9 +50,9 @@ typedef struct {
     float targetAltitudeCm;      // Финальная целевая высота (например, 20м)
     float currentTargetAltitudeCm; // Текущая целевая высота (меняется постепенно)
     float maxVelocity;           // Максимальная скорость подъёма (см/с)
-    float climbRate;
-    bool throttleRaised;
-    float throttleOutput;
+    float climbRate;             // Скорость набора высоты из конфигурации
+    bool throttleRaised;         // Флаг: газ поднят выше 50%
+    float throttleOutput;        // Текущее значение throttle
 } takeoff_t;
 
 static takeoff_t takeoffState;
@@ -62,7 +62,7 @@ void takeoffInit(void)
     takeoffState.state = TAKEOFF_STATE_IDLE;
     takeoffState.targetAltitudeCm = 0.0f;
     takeoffState.currentTargetAltitudeCm = 0.0f;
-    takeoffState.maxVelocity = takeoffConfig()->climbRateCmS * 10.0f; // 50 means 500cm/s
+    takeoffState.maxVelocity = takeoffConfig()->climbRateCmS * 10.0f; // 50 означает 500 см/с
     takeoffState.climbRate = takeoffConfig()->climbRateCmS;
     takeoffState.throttleRaised = false;
 }
@@ -76,46 +76,46 @@ static void takeoffReset(void)
 
 static void takeoffProcessTransitions(void)
 {
-    // Check if TAKEOFF_MODE is active
+    // Проверяем активен ли режим TAKEOFF_MODE
     if (FLIGHT_MODE(TAKEOFF_MODE)) {
-        // Check if armed
+        // Проверяем арминг
         if (ARMING_FLAG(ARMED)) {
             if (takeoffState.state == TAKEOFF_STATE_IDLE) {
                 takeoffState.state = TAKEOFF_STATE_ARMED;
                 takeoffReset();
             }
             
-            // Check if throttle is raised (above 50%)
+            // Проверяем поднят ли газ выше 50%
             const float rcThrottle = rcCommand[THROTTLE];
             if (rcThrottle > (PWM_RANGE_MIN + PWM_RANGE_MAX) / 2) {
                 takeoffState.throttleRaised = true;
             }
             
-            // Start climbing if throttle is raised and we're armed
+            // Начинаем подъём если газ поднят и дрон заармален
             if (takeoffState.throttleRaised && takeoffState.state == TAKEOFF_STATE_ARMED) {
                 takeoffState.state = TAKEOFF_STATE_CLIMBING;
-                // Set target altitude to takeoff altitude (from current altitude)
+                // Устанавливаем целевую высоту взлёта (от текущей высоты)
                 float currentAlt = getAltitudeCm();
                 float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
                 takeoffState.targetAltitudeCm = currentAlt + targetAlt;
-                // currentTargetAltitudeCm starts from current altitude and will increase gradually
+                // currentTargetAltitudeCm начинается с текущей высоты и будет увеличиваться постепенно
                 takeoffState.currentTargetAltitudeCm = currentAlt;
             }
             
-            // Check if we reached target altitude
+            // Проверяем достижение целевой высоты
             if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
                 const float currentAlt = getAltitudeCm();
-                if (fabsf(currentAlt - takeoffState.targetAltitudeCm) < 50.0f) { // Within 50cm
+                if (fabsf(currentAlt - takeoffState.targetAltitudeCm) < 50.0f) { // В пределах 50 см
                     takeoffState.state = TAKEOFF_STATE_HOLDING;
                 }
             }
         } else {
-            // Disarmed - reset state
+            // Дизарм - сбрасываем состояние
             takeoffState.state = TAKEOFF_STATE_IDLE;
             takeoffState.throttleRaised = false;
         }
     } else {
-        // TAKEOFF_MODE not active - reset state
+        // TAKEOFF_MODE не активен - сбрасываем состояние
         takeoffState.state = TAKEOFF_STATE_IDLE;
         takeoffState.throttleRaised = false;
     }
@@ -124,21 +124,21 @@ static void takeoffProcessTransitions(void)
 static void takeoffUpdate(void)
 {
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
-        // Gradually increase target altitude with velocity limit (like alt_hold)
-        float targetVelocity = takeoffState.maxVelocity; // Always climb at max velocity
+        // Постепенно увеличиваем целевую высоту с ограничением скорости (как в alt_hold)
+        float targetVelocity = takeoffState.maxVelocity; // Всегда поднимаемся с максимальной скоростью
         
-        // Increase currentTargetAltitudeCm gradually
+        // Увеличиваем currentTargetAltitudeCm постепенно
         takeoffState.currentTargetAltitudeCm += targetVelocity * taskIntervalSeconds;
         
-        // Don't exceed final target altitude
+        // Не превышаем финальную целевую высоту
         if (takeoffState.currentTargetAltitudeCm > takeoffState.targetAltitudeCm) {
             takeoffState.currentTargetAltitudeCm = takeoffState.targetAltitudeCm;
         }
         
-        // Use currentTargetAltitudeCm for altitude control
+        // Используем currentTargetAltitudeCm для управления высотой
         altitudeControl(takeoffState.currentTargetAltitudeCm, taskIntervalSeconds, targetVelocity);
     } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
-        // Holding at target altitude
+        // Удержание на целевой высоте
         altitudeControl(takeoffState.targetAltitudeCm, taskIntervalSeconds, 0.0f);
     }
     
@@ -152,17 +152,20 @@ void updateTakeoff(timeUs_t currentTimeUs)
     
     takeoffProcessTransitions();
 
-    // Debug output - always update regardless of state
-    // debug[0]: current velocity (cm/s)
-    // debug[1]: throttle percentage (0-100)
-    // debug[2]: target altitude (m)
-    // debug[3]: current target altitude (cm)
-    // debug[4]: takeoff state (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+    // Отладочный вывод - всегда обновляется независимо от состояния
+    // debug[0]: текущая вертикальная скорость (см/с)
+    // debug[1]: целевая скорость (см/с)
+    // debug[2]: процент throttle (0-100)
+    // debug[3]: целевая высота (м)
+    // debug[4]: текущая целевая высота (см)
+    // debug[5]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+
     DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeDerivative()));
-    DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.throttleOutput * 100.0f));
-    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffConfig()->takeoffAltitudeM);
-    DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(takeoffState.currentTargetAltitudeCm));
-    // DEBUG_SET(DEBUG_TAKEOFF, 4, takeoffState.state);
+    DEBUG_SET(DEBUG_TAKEOFF, 1, takeoffConfig()->climbRateCmS);
+    DEBUG_SET(DEBUG_TAKEOFF, 2, lrintf(takeoffState.throttleOutput * 100.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 3, takeoffConfig()->takeoffAltitudeM);
+    DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(takeoffState.currentTargetAltitudeCm));
+    // DEBUG_SET(DEBUG_TAKEOFF, 5, takeoffState.state);
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();
