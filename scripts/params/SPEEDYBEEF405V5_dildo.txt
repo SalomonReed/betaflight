@@ -70,8 +70,9 @@ set takeoff_climb_rate = 50     # Скорость подъёма (50 = 5 м/с)
 set takeoff_pitch_angle = 10    # Угол тангажа на целевой высоте (градусы)
 set debug_mode = TAKEOFF
 set altitude_source = BARO_ONLY
-set osd_throttle_pos = 3557
-set osd_pit_ang_pos = 3525
+set osd_throttle_pos = 15845
+set osd_pit_ang_pos = 15813
+set osd_debug_pos = 14826
 
 
 profile 0

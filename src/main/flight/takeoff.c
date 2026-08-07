@@ -196,19 +196,19 @@ void updateTakeoff(timeUs_t currentTimeUs)
     // Отладочный вывод - всегда обновляется независимо от состояния
     // debug[0]: текущая вертикальная скорость (см/с)
     // debug[1]: целевая скорость (см/с)
-    // debug[2]: процент throttle (0-100)
+    // debug[2]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
     // debug[3]: целевая высота (м)
     // debug[4]: текущая целевая высота (см)
-    // debug[5]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+    // debug[5]: процент throttle (0-100)
     // debug[6]: текущий угол тангажа (градусы * 10)
     // debug[7]: желаемый угол тангажа (градусы * 10, пропорционален высоте)
 
     DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeDerivative()));
     DEBUG_SET(DEBUG_TAKEOFF, 1, takeoffConfig()->climbRateCmS);
-    DEBUG_SET(DEBUG_TAKEOFF, 2, lrintf(takeoffState.throttleOutput * 100.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffState.state);
     DEBUG_SET(DEBUG_TAKEOFF, 3, takeoffConfig()->takeoffAltitudeM);
     DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(takeoffState.currentTargetAltitudeCm));
-    DEBUG_SET(DEBUG_TAKEOFF, 5, takeoffState.state);
+    DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.throttleOutput * 100.0f));
     DEBUG_SET(DEBUG_TAKEOFF, 6, lrintf(takeoffState.currentPitchAngleDeg * 10.0f));
     DEBUG_SET(DEBUG_TAKEOFF, 7, lrintf(takeoffState.desiredPitchAngleDeg * 10.0f));
     
