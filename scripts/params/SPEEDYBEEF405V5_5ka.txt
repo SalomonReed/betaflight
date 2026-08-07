@@ -1,0 +1,89 @@
+# 
+
+# diff
+
+# version
+# Betaflight / STM32F405 (S405) 4.5.2 Aug 18 2025 / 18:44:16 (norevision) MSP API: 1.46
+
+# start the command batch
+batch start
+
+board_name SPEEDYBEEF405V5
+manufacturer_id SPBE
+
+# feature
+feature -AIRMODE
+feature SERVO_TILT
+feature GPS
+feature TELEMETRY
+feature OSD
+feature CHANNEL_FORWARDING
+feature ESC_SENSOR
+
+# serial
+serial 2 131073 115200 57600 0 115200
+serial 3 2 115200 115200 0 115200
+
+# servo
+servo 0 900 2500 1300 100 11
+
+# beacon
+beacon RX_LOST
+
+# map
+map TAER1234
+
+# aux
+aux 0 1 2 1750 2100 0 0
+aux 1 0 0 1775 2075 0 0
+aux 2 2 2 1300 1700 0 0
+
+# master
+set dyn_notch_count = 1
+set dyn_notch_q = 500
+set acc_calibration = 28,-25,-26,1
+set mag_calibration = 50,-100,32
+set blackbox_sample_rate = 1/1
+set dshot_bidir = ON
+set motor_pwm_protocol = DSHOT300
+set motor_output_reordering = 2,3,0,1,4,5,6,7
+set gps_ublox_use_galileo = ON
+set ledstrip_profile = RACE
+set osd_vbat_pos = 3529
+set osd_rssi_pos = 2503
+set osd_link_tx_power_pos = 2470
+set osd_rssi_dbm_pos = 1198
+set osd_flymode_pos = 3177
+set osd_g_force_pos = 3241
+set osd_crosshairs_pos = 2360
+set osd_ah_sbar_pos = 2361
+set osd_ah_pos = 2233
+set osd_current_pos = 3464
+set osd_gps_speed_pos = 2168
+set osd_gps_lon_pos = 2601
+set osd_gps_sats_pos = 2151
+set osd_home_dir_pos = 2137
+set osd_home_dist_pos = 3209
+set osd_compass_bar_pos = 2517
+set osd_altitude_pos = 6295
+set osd_warnings_pos = 14837
+set osd_avg_cell_voltage_pos = 3497
+set osd_disarmed_pos = 2486
+set osd_ready_mode_pos = 2455
+set osd_esc_tmp_pos = 2215
+set osd_core_temp_pos = 2279
+set osd_sys_delay_pos = 265
+set osd_sys_lq_pos = 29
+set osd_sys_vtx_temp_pos = 2247
+
+profile 0
+
+# profile 0
+set ez_landing_limit = 5
+
+rateprofile 1
+
+# end the command batch
+batch end
+
+# 

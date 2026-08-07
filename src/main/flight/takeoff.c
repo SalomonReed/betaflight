@@ -159,13 +159,17 @@ void updateTakeoff(timeUs_t currentTimeUs)
     // debug[3]: целевая высота (м)
     // debug[4]: текущая целевая высота (см)
     // debug[5]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+    // debug[6]: throttleRaised флаг (0/1)
+    // debug[7]: FLIGHT_MODE(TAKEOFF_MODE) флаг (0/1)
 
     DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeDerivative()));
     DEBUG_SET(DEBUG_TAKEOFF, 1, takeoffConfig()->climbRateCmS);
     DEBUG_SET(DEBUG_TAKEOFF, 2, lrintf(takeoffState.throttleOutput * 100.0f));
     DEBUG_SET(DEBUG_TAKEOFF, 3, takeoffConfig()->takeoffAltitudeM);
     DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(takeoffState.currentTargetAltitudeCm));
-    // DEBUG_SET(DEBUG_TAKEOFF, 5, takeoffState.state);
+    DEBUG_SET(DEBUG_TAKEOFF, 5, takeoffState.state);
+    DEBUG_SET(DEBUG_TAKEOFF, 6, takeoffState.throttleRaised ? 1 : 0);
+    DEBUG_SET(DEBUG_TAKEOFF, 7, FLIGHT_MODE(TAKEOFF_MODE) ? 1 : 0);
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();

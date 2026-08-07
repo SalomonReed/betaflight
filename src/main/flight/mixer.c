@@ -790,6 +790,19 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     }
 
     //  The following fixed throttle values will not be shown in the blackbox log
+#ifdef USE_TAKEOFF
+    // Throttle value to be used during takeoff mode
+    // This must be checked BEFORE other throttle overrides
+    if (FLIGHT_MODE(TAKEOFF_MODE)) {
+        if (isTakeoffActive()) {
+            throttle = getAutopilotThrottle();
+        } else {
+            // Takeoff mode active but takeoff not started yet - block throttle from stick
+            throttle = 0.0f;
+        }
+    }
+#endif
+
 #ifdef USE_YAW_SPIN_RECOVERY
     // 50% throttle provides the maximum authority for yaw recovery when airmode is not active.
     // When airmode is active the throttle setting doesn't impact recovery authority.
@@ -810,16 +823,6 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     // Throttle value to be used during altitude hold mode (and failsafe landing mode)
     if (FLIGHT_MODE(ALT_HOLD_MODE)) {
         throttle = getAutopilotThrottle();
-    }
-#endif
-
-#ifdef USE_TAKEOFF
-    // Throttle value to be used during takeoff mode
-    if (isTakeoffActive()) {
-        throttle = getAutopilotThrottle();
-    } else if (FLIGHT_MODE(TAKEOFF_MODE)) {
-        // Takeoff mode active but takeoff not started yet - block throttle from stick
-        throttle = 0.0f;
     }
 #endif
 
