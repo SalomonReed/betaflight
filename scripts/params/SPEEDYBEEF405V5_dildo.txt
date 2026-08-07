@@ -29,8 +29,8 @@ serial UART5 1024 115200 115200 0 115200
 
 # aux
 aux 0 0 4 1700 2100 0 0
-aux 1 2 1 1700 2100 0 0
-aux 2 56 1 1300 1700 0 0
+aux 1 1 1 1300 1700 0 0
+aux 2 56 1 1700 2100 0 0
 aux 3 13 4 1300 1700 0 0
 
 # master
@@ -63,8 +63,16 @@ set osd_disarmed_pos = 14773
 set osd_esc_tmp_pos = 14502
 set osd_core_temp_pos = 14470
 set osd_sys_vtx_temp_pos = 14534
-set debug_mode = BARO
+
+# Takeoff
+set takeoff_altitude_m = 100    # Целевая высота (метры)
+set takeoff_climb_rate = 50     # Скорость подъёма (50 = 5 м/с)
+set takeoff_pitch_angle = 10    # Угол тангажа на целевой высоте (градусы)
+set debug_mode = TAKEOFF
 set altitude_source = BARO_ONLY
+set osd_throttle_pos = 3557
+set osd_pit_ang_pos = 3525
+
 
 profile 0
 

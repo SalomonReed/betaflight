@@ -1,0 +1,31 @@
+# start the command batch
+batch start
+
+
+# feature
+feature -GPS
+feature -TELEMETRY
+
+# serial
+serial UART2 1 115200 57600 0 115200
+
+# aux
+aux 0 0 0 1700 2100 0 0
+aux 1 1 1 1250 1650 0 0
+aux 2 56 1 1700 2100 0 0
+
+# Takeoff
+set takeoff_altitude_m = 100    # Целевая высота (метры)
+set takeoff_climb_rate = 50     # Скорость подъёма (50 = 5 м/с)
+set takeoff_pitch_angle = 10    # Угол тангажа на целевой высоте (градусы)
+set debug_mode = TAKEOFF
+set altitude_source = BARO_ONLY
+
+profile 0
+
+rateprofile 0
+
+# end the command batch
+batch end
+
+# 

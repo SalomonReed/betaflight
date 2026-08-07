@@ -50,6 +50,9 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 #include "flight/rpm_filter.h"
+#ifdef USE_TAKEOFF
+#include "flight/takeoff.h"
+#endif
 
 #include "io/gps.h"
 
@@ -576,6 +579,9 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
 
 #ifdef USE_GPS_RESCUE
     angleTarget += gpsRescueAngle[axis] / 100.0f; // Angle is in centidegrees, stepped on roll at 10Hz but not on pitch
+#endif
+#ifdef USE_TAKEOFF
+    angleTarget += takeoffAngle[axis] / 100.0f; // Angle is in centidegrees
 #endif
 #if defined(USE_POSITION_HOLD) && !defined(USE_WING)
     if (FLIGHT_MODE(POS_HOLD_MODE)) {

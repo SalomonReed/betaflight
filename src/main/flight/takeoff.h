@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/axis.h"
 #include "pg/takeoff.h"
 
 #ifdef USE_TAKEOFF
@@ -26,5 +27,8 @@
 void takeoffInit(void);
 void updateTakeoff(timeUs_t currentTimeUs);
 bool isTakeoffActive(void);
+
+// Takeoff pitch angle offset in centidegrees (added to angle target in pid.c)
+extern float takeoffAngle[RP_AXIS_COUNT];
 
 #endif // USE_TAKEOFF
