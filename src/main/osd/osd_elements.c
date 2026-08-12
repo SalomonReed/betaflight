@@ -1109,9 +1109,13 @@ static void osdElementFlymode(osdElementParms_t *element)
         strcpy(element->buff, "ALTH");
 #ifdef USE_TAKEOFF
     } else if (FLIGHT_MODE(TAKEOFF_MODE)) {
+        // DEBUG_SET(DEBUG_TAKEOFF, 6, 1); // Маркер: TAKEOFF_MODE активен, показываем TKOF
         strcpy(element->buff, "TKOF");
 #endif
     } else if (FLIGHT_MODE(ANGLE_MODE)) {
+#ifdef USE_TAKEOFF
+        // DEBUG_SET(DEBUG_TAKEOFF, 6, FLIGHT_MODE(TAKEOFF_MODE) ? 2 : 0); // 2 = TAKEOFF_MODE был, но не сработал
+#endif
         strcpy(element->buff, "ANGL");
     } else if (FLIGHT_MODE(HORIZON_MODE)) {
         strcpy(element->buff, "HOR ");

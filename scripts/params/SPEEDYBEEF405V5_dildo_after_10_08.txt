@@ -3,7 +3,7 @@
 # diff
 
 # version
-# Betaflight / STM32F405 (F405) 2025.12.6 Aug 12 2026 / 14:35:45 (norevision) MSP API: 1.47
+# Betaflight / STM32F405 (F405) 2025.12.6 Aug  7 2026 / 17:57:23 (norevision) MSP API: 1.47
 # config rev: 92c695a
 
 # start the command batch
@@ -34,12 +34,14 @@ aux 1 56 1 1700 2100 0 0
 aux 2 13 4 1300 1700 0 0
 
 # master
-set acc_calibration = 79,-54,-4,1
+set acc_calibration = 66,-8,0,1
 set motor_pwm_protocol = DSHOT300
 set bat_capacity = 6500
 set vbat_max_cell_voltage = 435
 set force_battery_cell_count = 6
 set gps_ublox_use_galileo = ON
+set takeoff_altitude_m = 3
+set takeoff_climb_rate = 10
 set osd_vbat_pos = 14853
 set osd_rssi_pos = 1381
 set osd_link_quality_pos = 15749
@@ -47,6 +49,7 @@ set osd_link_tx_power_pos = 15685
 set osd_rssi_dbm_pos = 15717
 set osd_flymode_pos = 15492
 set osd_g_force_pos = 15556
+set osd_throttle_pos = 15845
 set osd_crosshairs_pos = 14648
 set osd_ah_sbar_pos = 14649
 set osd_ah_pos = 14521
@@ -59,22 +62,16 @@ set osd_home_dir_pos = 14745
 set osd_home_dist_pos = 15524
 set osd_compass_bar_pos = 500
 set osd_altitude_pos = 14487
+set osd_debug_pos = 14826
 set osd_warnings_pos = 14804
 set osd_avg_cell_voltage_pos = 14821
+set osd_pit_ang_pos = 15813
 set osd_disarmed_pos = 14773
 set osd_esc_tmp_pos = 14502
 set osd_core_temp_pos = 14470
 set osd_sys_vtx_temp_pos = 14534
-
-# Takeoff
-set takeoff_altitude_m = 100    # Целевая высота (метры)
-set takeoff_throttle = 1650     # Фиксированный throttle для подъёма
-set takeoff_pitch_angle = 10    # Угол тангажа на целевой высоте (градусы)
 set debug_mode = TAKEOFF
 set altitude_source = BARO_ONLY
-set osd_throttle_pos = 15845
-set osd_pit_ang_pos = 15813
-set osd_debug_pos = 14826
 
 profile 0
 

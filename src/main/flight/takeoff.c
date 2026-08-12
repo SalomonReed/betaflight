@@ -88,18 +88,18 @@ static void takeoffProcessTransitions(void)
             }
             
             // Проверяем поднят ли газ выше 50%
-            const float rcThrottle = rcCommand[THROTTLE];
+                const float rcThrottle = rcCommand[THROTTLE];
             if (rcThrottle > (PWM_RANGE_MIN + PWM_RANGE_MAX) / 2) {
-                takeoffState.throttleRaised = true;
-            }
-            
-            // Начинаем подъём если газ поднят и дрон заармален
+                    takeoffState.throttleRaised = true;
+                }
+                
+                // Начинаем подъём если газ поднят и дрон заармален
             if (takeoffState.throttleRaised && takeoffState.state == TAKEOFF_STATE_ARMED) {
-                takeoffState.state = TAKEOFF_STATE_CLIMBING;
-                // Устанавливаем целевую высоту взлёта (от текущей высоты)
-                float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
-                takeoffState.targetAltitudeCm = takeoffState.baseAltitudeCm + targetAlt;
-            }
+                    takeoffState.state = TAKEOFF_STATE_CLIMBING;
+                    // Устанавливаем целевую высоту взлёта (от текущей высоты)
+                    float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
+                    takeoffState.targetAltitudeCm = takeoffState.baseAltitudeCm + targetAlt;
+                }
             
             // Проверяем достижение целевой высоты
             if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
@@ -140,9 +140,9 @@ static void takeoffUpdate(void)
         takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
         
     } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
-        // Возврат тангажа к нулю
-        takeoffState.currentPitchAngleDeg = 0.0f;
-        takeoffAngle[FD_PITCH] = 0;
+        // Поддерживаем последний угол тангажа
+        // takeoffState.currentPitchAngleDeg = 0.0f;
+        takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
     } else {
         // В других состояниях сбрасываем угол
         takeoffState.currentPitchAngleDeg = 0.0f;
@@ -155,19 +155,16 @@ void updateTakeoff(timeUs_t currentTimeUs)
     UNUSED(currentTimeUs);
     
     takeoffProcessTransitions();
-
     // Отладочный вывод - всегда обновляется независимо от состояния
-    // debug[0]: текущая высота (см)
+    // debug[0]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
     // debug[1]: целевая высота (см)
-    // debug[2]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
-    // debug[3]: угол тангажа (градусы * 10)
-    // debug[4]: takeoff_throttle из конфига
+    // debug[2]: takeoff_throttle из конфига
+    // debug[3]: Throttle из mixer.c
 
-    DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeCm()));
+
+    DEBUG_SET(DEBUG_TAKEOFF, 0, takeoffState.state);
     DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.targetAltitudeCm));
-    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffState.state);
-    DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(takeoffState.currentPitchAngleDeg * 10.0f));
-    DEBUG_SET(DEBUG_TAKEOFF, 4, takeoffConfig()->takeoffThrottle);
+    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffConfig()->takeoffThrottle);
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();

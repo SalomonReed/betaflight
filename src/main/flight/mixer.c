@@ -801,7 +801,7 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
             // Takeoff mode active but takeoff not started yet - block throttle from stick
             throttle = 0.0f;
         }
-        DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(throttle * 100));
+        DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(throttle * 100));
     }
 #endif
 
