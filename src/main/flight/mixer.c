@@ -795,11 +795,13 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     // This must be checked BEFORE other throttle overrides
     if (FLIGHT_MODE(TAKEOFF_MODE)) {
         if (isTakeoffActive()) {
-            throttle = getAutopilotThrottle();
+            // Use fixed throttle from takeoff config
+            throttle = getTakeoffThrottle();
         } else {
             // Takeoff mode active but takeoff not started yet - block throttle from stick
             throttle = 0.0f;
         }
+        DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(throttle * 100));
     }
 #endif
 

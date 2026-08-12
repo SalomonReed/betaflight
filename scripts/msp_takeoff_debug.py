@@ -94,11 +94,11 @@ def main():
     print("\nBetaflight TAKEOFF Debug Reader")
     print("=" * 60)
     print("Debug mode: TAKEOFF")
-    print("  debug[0]: current velocity (cm/s)")
-    print("  debug[1]: throttle percentage (0-100)")
-    print("  debug[2]: target altitude (m)")
-    print("  debug[3]: current target altitude (cm)")
-    print("  debug[4]: state (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)")
+    print("  debug[0]: current altitude (cm)")
+    print("  debug[1]: target altitude (cm)")
+    print("  debug[2]: state (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)")
+    print("  debug[3]: pitch angle (degrees * 10)")
+    print("  debug[4]: takeoff throttle config (1000-2000)")
     print("Press Ctrl+C to stop\n")
     
     # Set debug mode to TAKEOFF (you need to find the actual mode number)
@@ -110,13 +110,13 @@ def main():
             
             if debug_values:
                 state_names = ['IDLE', 'ARMED', 'CLIMBING', 'HOLDING']
-                state_name = state_names[debug_values[4]] if debug_values[4] < len(state_names) else 'UNKNOWN'
-                sys.stdout.write("\r" + " " * 80 + "\r")
-                print(f"VEL:{debug_values[0]:5d} cm/s  "
-                      f"THR:{debug_values[1]:3d}%  "
-                      f"TARGET:{debug_values[2]:3d}m  "
-                      f"CURR_TARGET:{debug_values[3]:5d}cm  "
-                      f"STATE:{state_name}", end='')
+                state_name = state_names[debug_values[2]] if debug_values[2] < len(state_names) else 'UNKNOWN'
+                sys.stdout.write("\r" + " " * 100 + "\r")
+                print(f"ALT:{debug_values[0]:5d}cm  "
+                      f"TGT:{debug_values[1]:5d}cm  "
+                      f"PITCH:{debug_values[3]/10:4.1f}°  "
+                      f"THR_CFG:{debug_values[4]:4d}  "
+                      f"ST:{state_name}", end='')
                 sys.stdout.flush()
             
             time.sleep(0.1)

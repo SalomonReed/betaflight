@@ -28,15 +28,13 @@
 #include "fc/rc.h"
 #include "fc/runtime_config.h"
 
-#include "flight/autopilot.h"
 #include "flight/position.h"
 
 #include "rx/rx.h"
+
 #include "pg/takeoff.h"
 
 #include "takeoff.h"
-
-static const float taskIntervalSeconds = HZ_TO_INTERVAL(TAKEOFF_TASK_RATE_HZ);
 
 // Takeoff angle offset in centidegrees (used in pid.c)
 float takeoffAngle[RP_AXIS_COUNT] = { 0 };
@@ -52,12 +50,8 @@ typedef struct {
     takeoffState_e state;
     float baseAltitudeCm;        // Начальная высота (от которой начинаем подъём)
     float targetAltitudeCm;      // Финальная целевая высота (например, 20м)
-    float currentTargetAltitudeCm; // Текущая целевая высота (меняется постепенно)
-    float maxVelocity;           // Максимальная скорость подъёма (см/с)
     bool throttleRaised;         // Флаг: газ поднят выше 50%
-    float throttleOutput;        // Текущее значение throttle
     float currentPitchAngleDeg;  // Текущий угол тангажа (градусы)
-    float desiredPitchAngleDeg;  // Желаемый угол тангажа (пропорционален высоте)
 } takeoff_t;
 
 static takeoff_t takeoffState;
@@ -67,23 +61,17 @@ void takeoffInit(void)
     takeoffState.state = TAKEOFF_STATE_IDLE;
     takeoffState.baseAltitudeCm = 0.0f;
     takeoffState.targetAltitudeCm = 0.0f;
-    takeoffState.currentTargetAltitudeCm = 0.0f;
-    takeoffState.maxVelocity = takeoffConfig()->climbRateCmS * 10.0f; // 50 означает 500 см/с
     takeoffState.throttleRaised = false;
     takeoffState.currentPitchAngleDeg = 0.0f;
-    takeoffState.desiredPitchAngleDeg = 0.0f;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
 
 static void takeoffReset(void)
 {
-    resetAltitudeControl();
     takeoffState.baseAltitudeCm = getAltitudeCm();
     takeoffState.targetAltitudeCm = getAltitudeCm();
-    takeoffState.currentTargetAltitudeCm = getAltitudeCm();
     takeoffState.currentPitchAngleDeg = 0.0f;
-    takeoffState.desiredPitchAngleDeg = 0.0f;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
@@ -111,8 +99,6 @@ static void takeoffProcessTransitions(void)
                 // Устанавливаем целевую высоту взлёта (от текущей высоты)
                 float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
                 takeoffState.targetAltitudeCm = takeoffState.baseAltitudeCm + targetAlt;
-                // currentTargetAltitudeCm начинается с текущей высоты и будет увеличиваться постепенно
-                takeoffState.currentTargetAltitudeCm = takeoffState.baseAltitudeCm;
             }
             
             // Проверяем достижение целевой высоты
@@ -137,23 +123,9 @@ static void takeoffProcessTransitions(void)
 static void takeoffUpdate(void)
 {
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
-        // Постепенно увеличиваем целевую высоту с ограничением скорости (как в alt_hold)
-        float targetVelocity = takeoffState.maxVelocity; // Всегда поднимаемся с максимальной скоростью
-        
-        // Увеличиваем currentTargetAltitudeCm постепенно
-        takeoffState.currentTargetAltitudeCm += targetVelocity * taskIntervalSeconds;
-        
-        // Не превышаем финальную целевую высоту
-        if (takeoffState.currentTargetAltitudeCm > takeoffState.targetAltitudeCm) {
-            takeoffState.currentTargetAltitudeCm = takeoffState.targetAltitudeCm;
-        }
-        
-        // Используем currentTargetAltitudeCm для управления высотой
-        altitudeControl(takeoffState.currentTargetAltitudeCm, taskIntervalSeconds, targetVelocity);
-        
         // Вычисляем желаемый угол тангажа пропорционально высоте
         float altitudeRange = takeoffState.targetAltitudeCm - takeoffState.baseAltitudeCm;
-        float currentAltitude = takeoffState.currentTargetAltitudeCm - takeoffState.baseAltitudeCm;
+        float currentAltitude = getAltitudeCm() - takeoffState.baseAltitudeCm;
         float progress = 0.0f;
         
         if (altitudeRange > 0.0f) {
@@ -161,30 +133,21 @@ static void takeoffUpdate(void)
             progress = constrainf(progress, 0.0f, 1.0f);
         }
         
-        // Желаемый угол пропорционален прогрессу подъёма
-        takeoffState.desiredPitchAngleDeg = takeoffConfig()->pitchAngleDeg * progress;
-        takeoffState.currentPitchAngleDeg = takeoffState.desiredPitchAngleDeg;
+        // Угол пропорционален прогрессу подъёма
+        takeoffState.currentPitchAngleDeg = takeoffConfig()->pitchAngleDeg * progress;
         
         // Устанавливаем угол в сантиградусах для pid.c
         takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
         
     } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
-        // Удержание на целевой высоте
-        altitudeControl(takeoffState.targetAltitudeCm, taskIntervalSeconds, 0.0f);
-        
         // Возврат тангажа к нулю
-        takeoffState.desiredPitchAngleDeg = 0.0f;
         takeoffState.currentPitchAngleDeg = 0.0f;
         takeoffAngle[FD_PITCH] = 0;
     } else {
         // В других состояниях сбрасываем угол
         takeoffState.currentPitchAngleDeg = 0.0f;
-        takeoffState.desiredPitchAngleDeg = 0.0f;
         takeoffAngle[FD_PITCH] = 0;
     }
-    
-    // Сохраняем текущее значение throttle
-    takeoffState.throttleOutput = getAutopilotThrottle();
 }
 
 void updateTakeoff(timeUs_t currentTimeUs)
@@ -194,32 +157,31 @@ void updateTakeoff(timeUs_t currentTimeUs)
     takeoffProcessTransitions();
 
     // Отладочный вывод - всегда обновляется независимо от состояния
-    // debug[0]: текущая вертикальная скорость (см/с)
-    // debug[1]: целевая скорость (см/с)
+    // debug[0]: текущая высота (см)
+    // debug[1]: целевая высота (см)
     // debug[2]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
-    // debug[3]: целевая высота (м)
-    // debug[4]: текущая целевая высота (см)
-    // debug[5]: процент throttle (0-100)
-    // debug[6]: текущий угол тангажа (градусы * 10)
-    // debug[7]: желаемый угол тангажа (градусы * 10, пропорционален высоте)
+    // debug[3]: угол тангажа (градусы * 10)
+    // debug[4]: takeoff_throttle из конфига
 
-    DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeDerivative()));
-    DEBUG_SET(DEBUG_TAKEOFF, 1, takeoffConfig()->climbRateCmS);
+    DEBUG_SET(DEBUG_TAKEOFF, 0, lrintf(getAltitudeCm()));
+    DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.targetAltitudeCm));
     DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffState.state);
-    DEBUG_SET(DEBUG_TAKEOFF, 3, takeoffConfig()->takeoffAltitudeM);
-    DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(takeoffState.currentTargetAltitudeCm));
-    DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.throttleOutput * 100.0f));
-    DEBUG_SET(DEBUG_TAKEOFF, 6, lrintf(takeoffState.currentPitchAngleDeg * 10.0f));
-    DEBUG_SET(DEBUG_TAKEOFF, 7, lrintf(takeoffState.desiredPitchAngleDeg * 10.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(takeoffState.currentPitchAngleDeg * 10.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 4, takeoffConfig()->takeoffThrottle);
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();
     }
 }
-
 bool isTakeoffActive(void)
 {
     return takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING;
+}
+
+float getTakeoffThrottle(void)
+{
+    // Возвращаем фиксированный throttle из конфига в диапазоне 0.0-1.0
+    return (float)(takeoffConfig()->takeoffThrottle - PWM_RANGE_MIN) / (PWM_RANGE_MAX - PWM_RANGE_MIN);
 }
 
 #endif // USE_TAKEOFF

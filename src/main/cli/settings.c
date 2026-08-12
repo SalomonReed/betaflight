@@ -1211,6 +1211,7 @@ const clivalue_t valueTable[] = {
     { "takeoff_altitude_m",          VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 1, 200 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, takeoffAltitudeM) },
     { "takeoff_climb_rate",          VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 10, 200 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, climbRateCmS) },
     { "takeoff_pitch_angle",         VAR_INT16 | MASTER_VALUE, .config.minmax = { -45, 45 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, pitchAngleDeg) },
+    { "takeoff_throttle",            VAR_UINT16 | MASTER_VALUE, .config.minmaxUnsigned = { 1000, 2000 }, PG_TAKEOFF_CONFIG, offsetof(takeoffConfig_t, takeoffThrottle) },
 #endif // USE_TAKEOFF
 
 // PG_PID_CONFIG
