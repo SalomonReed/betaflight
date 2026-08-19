@@ -29,6 +29,7 @@
 #include "fc/runtime_config.h"
 
 #include "flight/position.h"
+#include "flight/imu.h"
 
 #include "rx/rx.h"
 
@@ -43,6 +44,7 @@ typedef enum {
     TAKEOFF_STATE_IDLE = 0,
     TAKEOFF_STATE_ARMED,
     TAKEOFF_STATE_CLIMBING,
+    TAKEOFF_STATE_ROTATING,
     TAKEOFF_STATE_HOLDING
 } takeoffState_e;
 
@@ -52,6 +54,10 @@ typedef struct {
     float targetAltitudeCm;      // Финальная целевая высота (например, 20м)
     bool throttleRaised;         // Флаг: газ поднят выше 50%
     float currentPitchAngleDeg;  // Текущий угол тангажа (градусы)
+    float startHeadingDeg;       // Начальный курс при начале поворота
+    float targetHeadingDeg;      // Целевой курс для поворота
+    float desiredYawRate;        // Желаемая скорость вращения по yaw (градусы/сек)
+    int8_t preferredDirection;   // Предпочтительное направление поворота: 1 = по часовой, -1 = против, 0 = не определено
 } takeoff_t;
 
 static takeoff_t takeoffState;
@@ -63,6 +69,9 @@ void takeoffInit(void)
     takeoffState.targetAltitudeCm = 0.0f;
     takeoffState.throttleRaised = false;
     takeoffState.currentPitchAngleDeg = 0.0f;
+    takeoffState.startHeadingDeg = 0.0f;
+    takeoffState.targetHeadingDeg = 0.0f;
+    takeoffState.desiredYawRate = 0.0f;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
@@ -72,6 +81,9 @@ static void takeoffReset(void)
     takeoffState.baseAltitudeCm = getAltitudeCm();
     takeoffState.targetAltitudeCm = getAltitudeCm();
     takeoffState.currentPitchAngleDeg = 0.0f;
+    takeoffState.startHeadingDeg = attitude.values.yaw / 10.0f; // Convert from decidegrees to degrees
+    takeoffState.targetHeadingDeg = takeoffConfig()->targetHeadingDeg;
+    takeoffState.desiredYawRate = 0.0f;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
@@ -88,20 +100,52 @@ static void takeoffProcessTransitions(void)
             }
             
             // Проверяем поднят ли газ выше 50%
-                const float rcThrottle = rcCommand[THROTTLE];
+            const float rcThrottle = rcCommand[THROTTLE];
             if (rcThrottle > (PWM_RANGE_MIN + PWM_RANGE_MAX) / 2) {
-                    takeoffState.throttleRaised = true;
+                takeoffState.throttleRaised = true;
+            }
+            
+            // Начинаем подъём если газ поднят и дрон заармален
+            if (takeoffState.throttleRaised && takeoffState.state == TAKEOFF_STATE_ARMED) {
+                takeoffState.state = TAKEOFF_STATE_CLIMBING;
+                // Устанавливаем целевую высоту взлёта (от текущей высоты)
+                float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
+                takeoffState.targetAltitudeCm = takeoffState.baseAltitudeCm + targetAlt;
+            }
+            
+            // Проверяем достижение минимальной высоты для начала поворота
+            if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
+                const float currentAlt = getAltitudeCm();
+                const float minHeightCm = takeoffConfig()->minHeightM * 100.0f;
+                const float altitudeAboveBase = currentAlt - takeoffState.baseAltitudeCm;
+                
+                // Если достигли минимальной высоты и есть целевой курс для поворота
+                if (altitudeAboveBase >= minHeightCm && takeoffConfig()->targetHeadingDeg >= 0) {
+                    takeoffState.state = TAKEOFF_STATE_ROTATING;
+                    takeoffState.startHeadingDeg = attitude.values.yaw / 10.0f;
+                    takeoffState.targetHeadingDeg = takeoffConfig()->targetHeadingDeg;
+                }
+            }
+            
+            // Проверяем завершение поворота
+            if (takeoffState.state == TAKEOFF_STATE_ROTATING) {
+                const float currentHeadingDeg = attitude.values.yaw / 10.0f;
+                float headingError = takeoffState.targetHeadingDeg - currentHeadingDeg;
+                
+                // Нормализуем ошибку курса в диапазон [-180, 180]
+                if (headingError > 180.0f) {
+                    headingError -= 360.0f;
+                } else if (headingError < -180.0f) {
+                    headingError += 360.0f;
                 }
                 
-                // Начинаем подъём если газ поднят и дрон заармален
-            if (takeoffState.throttleRaised && takeoffState.state == TAKEOFF_STATE_ARMED) {
+                // Если курс достигнут (в пределах 5 градусов)
+                if (fabsf(headingError) < 5.0f) {
                     takeoffState.state = TAKEOFF_STATE_CLIMBING;
-                    // Устанавливаем целевую высоту взлёта (от текущей высоты)
-                    float targetAlt = takeoffConfig()->takeoffAltitudeM * 100.0f;
-                    takeoffState.targetAltitudeCm = takeoffState.baseAltitudeCm + targetAlt;
                 }
+            }
             
-            // Проверяем достижение целевой высоты
+            // Проверяем достижение целевой высоты (только в режиме CLIMBING после поворота)
             if (takeoffState.state == TAKEOFF_STATE_CLIMBING) {
                 const float currentAlt = getAltitudeCm();
                 if (fabsf(currentAlt - takeoffState.targetAltitudeCm) < 50.0f) { // В пределах 50 см
@@ -139,14 +183,57 @@ static void takeoffUpdate(void)
         // Устанавливаем угол в сантиградусах для pid.c
         takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
         
-    } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
-        // Поддерживаем последний угол тангажа
-        // takeoffState.currentPitchAngleDeg = 0.0f;
-        takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
-    } else {
-        // В других состояниях сбрасываем угол
+    } else if (takeoffState.state == TAKEOFF_STATE_ROTATING) {
+        // Во время поворота pitch остаётся нулевым
         takeoffState.currentPitchAngleDeg = 0.0f;
         takeoffAngle[FD_PITCH] = 0;
+        
+        // Вычисляем ошибку курса
+        const float currentHeadingDeg = attitude.values.yaw / 10.0f;
+        float headingError = takeoffState.targetHeadingDeg - currentHeadingDeg;
+        
+        // Нормализуем ошибку курса в диапазон [-180, 180]
+        if (headingError > 180.0f) {
+            headingError -= 360.0f;
+        } else if (headingError < -180.0f) {
+            headingError += 360.0f;
+        }
+        
+        // Отладочная информация
+        DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(currentHeadingDeg * 10.0f));  // текущий курс * 10
+        DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(headingError * 10.0f));       // ошибка курса * 10
+        
+        // Вычисляем желаемую скорость вращения
+        const float yawRate = takeoffConfig()->yawRate;
+        
+        // В Betaflight:
+        // - Положительный yaw rate = поворот ПО часовой стрелке = УМЕНЬШЕНИЕ курса
+        // - Отрицательный yaw rate = поворот ПРОТИВ часовой стрелки = УВЕЛИЧЕНИЕ курса
+        //
+        // Если headingError > 0, нужно УВЕЛИЧИТЬ курс → отрицательный yaw rate
+        // Если headingError < 0, нужно УМЕНЬШИТЬ курс → положительный yaw rate
+        
+        if (headingError > 5.0f) {
+            // Нужно увеличить курс (поворот ПРОТИВ часовой стрелки)
+            takeoffState.desiredYawRate = -yawRate;
+        } else if (headingError < -5.0f) {
+            // Нужно уменьшить курс (поворот ПО часовой стрелке)
+            takeoffState.desiredYawRate = yawRate;
+        } else {
+            // Курс достигнут
+            takeoffState.desiredYawRate = 0.0f;
+        }
+        
+        DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.desiredYawRate));  // желаемый yaw rate
+        
+    } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
+        // Поддерживаем последний угол тангажа
+        takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
+    } else {
+        // В других состояниях сбрасываем угол и yaw rate
+        takeoffState.currentPitchAngleDeg = 0.0f;
+        takeoffAngle[FD_PITCH] = 0;
+        takeoffState.desiredYawRate = 0.0f;
     }
 }
 
@@ -156,29 +243,43 @@ void updateTakeoff(timeUs_t currentTimeUs)
     
     takeoffProcessTransitions();
     // Отладочный вывод - всегда обновляется независимо от состояния
-    // debug[0]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=HOLDING)
+    // debug[0]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=ROTATING, 4=HOLDING)
     // debug[1]: целевая высота (см)
     // debug[2]: takeoff_throttle из конфига
     // debug[3]: Throttle из mixer.c
+    // debug[4]: текущий курс (градусы)
+    // debug[5]: целевой курс (градусы)
 
 
     DEBUG_SET(DEBUG_TAKEOFF, 0, takeoffState.state);
     DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.targetAltitudeCm));
     DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffConfig()->takeoffThrottle);
+    DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(attitude.values.yaw / 10.0f));
+    DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.targetHeadingDeg));
     
-    if (takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING) {
+    if (takeoffState.state == TAKEOFF_STATE_CLIMBING || 
+        takeoffState.state == TAKEOFF_STATE_ROTATING || 
+        takeoffState.state == TAKEOFF_STATE_HOLDING) {
         takeoffUpdate();
     }
 }
 bool isTakeoffActive(void)
 {
-    return takeoffState.state == TAKEOFF_STATE_CLIMBING || takeoffState.state == TAKEOFF_STATE_HOLDING;
+    return takeoffState.state == TAKEOFF_STATE_CLIMBING || 
+           takeoffState.state == TAKEOFF_STATE_ROTATING || 
+           takeoffState.state == TAKEOFF_STATE_HOLDING;
 }
 
 float getTakeoffThrottle(void)
 {
     // Возвращаем фиксированный throttle из конфига в диапазоне 0.0-1.0
     return (float)(takeoffConfig()->takeoffThrottle - PWM_RANGE_MIN) / (PWM_RANGE_MAX - PWM_RANGE_MIN);
+}
+
+float takeoffGetYawRate(void)
+{
+    // Возвращаем желаемую скорость вращения по yaw (градусы/сек)
+    return takeoffState.desiredYawRate;
 }
 
 #endif // USE_TAKEOFF

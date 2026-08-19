@@ -43,6 +43,9 @@
 #include "flight/failsafe.h"
 #include "flight/imu.h"
 #include "flight/gps_rescue.h"
+#ifdef USE_TAKEOFF
+#include "flight/takeoff.h"
+#endif
 #include "flight/pid.h"
 #include "flight/pid_init.h"
 
@@ -648,6 +651,15 @@ FAST_CODE void processRcCommand(void)
                 // pid controller with the value calculated from the desired heading logic.
                 angleRate = gpsRescueGetYawRate();
                 // Treat the stick input as centered to avoid any stick deflection base modifications (like acceleration limit)
+                rcDeflection[axis] = 0;
+                rcDeflectionAbs[axis] = 0;
+            } else
+#endif
+#ifdef USE_TAKEOFF
+            if ((axis == FD_YAW) && FLIGHT_MODE(TAKEOFF_MODE) && isTakeoffActive()) {
+                // If Takeoff mode is active and in ROTATING state, override yaw rate
+                angleRate = takeoffGetYawRate();
+                // Treat the stick input as centered
                 rcDeflection[axis] = 0;
                 rcDeflectionAbs[axis] = 0;
             } else

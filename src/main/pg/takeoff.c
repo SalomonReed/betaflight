@@ -27,9 +27,11 @@ PG_REGISTER_WITH_RESET_TEMPLATE(takeoffConfig_t, takeoffConfig, PG_TAKEOFF_CONFI
 
 PG_RESET_TEMPLATE(takeoffConfig_t, takeoffConfig,
     .takeoffAltitudeM = 20,      // 20 meters target altitude
-    .climbRateCmS = 50,          // 50 means 5 m/s climb rate (same format as alt_hold)
     .pitchAngleDeg = 0,          // No pitch tilt by default
     .takeoffThrottle = 1600,     // Fixed throttle for takeoff (1600 = ~60%)
+    .targetHeadingDeg = 0,       // Target heading 0 degrees (North)
+    .minHeightM = 5,             // Minimum height 5 meters before rotation
+    .yawRate = 30,               // Yaw rotation rate 30 degrees/second
 );
 
 #endif // USE_TAKEOFF

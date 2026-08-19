@@ -22,12 +22,13 @@
 
 #ifdef USE_TAKEOFF
 
-#define TAKEOFF_TASK_RATE_HZ 50
+#define TAKEOFF_TASK_RATE_HZ 100
 
 void takeoffInit(void);
 void updateTakeoff(timeUs_t currentTimeUs);
 bool isTakeoffActive(void);
 float getTakeoffThrottle(void);
+float takeoffGetYawRate(void);
 
 // Takeoff pitch angle offset in centidegrees (added to angle target in pid.c)
 extern float takeoffAngle[RP_AXIS_COUNT];
