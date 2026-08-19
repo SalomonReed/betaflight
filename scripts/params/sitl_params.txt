@@ -15,10 +15,15 @@ aux 0 0 0 1700 2100 0 0
 aux 2 56 1 1700 2100 0 0
 
 # Takeoff
+# altitude
 set takeoff_altitude_m = 100    # Целевая высота (метры)
-# set takeoff_climb_rate = 50     # Скорость подъёма (50 = 5 м/с)
 set takeoff_pitch_angle = 10    # Угол тангажа на целевой высоте (градусы)
-set takeoff_throttle = 1600       # Фиксированный throttle для подъёма
+set takeoff_throttle = 1600     # Фиксированный throttle для подъёма
+# heading
+set takeoff_heading_deg = 0     # Целевой курс (0-359°)
+set takeoff_min_height_m = 5    # Минимальная высота для поворота (м)
+set takeoff_yaw_rate = 30       # Скорость поворота (°/сек)
+
 set debug_mode = TAKEOFF
 set altitude_source = BARO_ONLY
 

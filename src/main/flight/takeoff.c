@@ -58,6 +58,7 @@ typedef struct {
     float targetHeadingDeg;      // Целевой курс для поворота
     float desiredYawRate;        // Желаемая скорость вращения по yaw (градусы/сек)
     int8_t preferredDirection;   // Предпочтительное направление поворота: 1 = по часовой, -1 = против, 0 = не определено
+    bool rotationCompleted;      // Флаг: поворот на целевой курс завершён
 } takeoff_t;
 
 static takeoff_t takeoffState;
@@ -72,6 +73,8 @@ void takeoffInit(void)
     takeoffState.startHeadingDeg = 0.0f;
     takeoffState.targetHeadingDeg = 0.0f;
     takeoffState.desiredYawRate = 0.0f;
+    takeoffState.preferredDirection = 0;
+    takeoffState.rotationCompleted = false;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
@@ -84,6 +87,8 @@ static void takeoffReset(void)
     takeoffState.startHeadingDeg = attitude.values.yaw / 10.0f; // Convert from decidegrees to degrees
     takeoffState.targetHeadingDeg = takeoffConfig()->targetHeadingDeg;
     takeoffState.desiredYawRate = 0.0f;
+    takeoffState.preferredDirection = 0;
+    takeoffState.rotationCompleted = false;
     takeoffAngle[FD_ROLL] = 0;
     takeoffAngle[FD_PITCH] = 0;
 }
@@ -119,8 +124,8 @@ static void takeoffProcessTransitions(void)
                 const float minHeightCm = takeoffConfig()->minHeightM * 100.0f;
                 const float altitudeAboveBase = currentAlt - takeoffState.baseAltitudeCm;
                 
-                // Если достигли минимальной высоты и есть целевой курс для поворота
-                if (altitudeAboveBase >= minHeightCm && takeoffConfig()->targetHeadingDeg >= 0) {
+                // Если достигли минимальной высоты, поворот ещё не выполнен и есть целевой курс для поворота
+                if (altitudeAboveBase >= minHeightCm && !takeoffState.rotationCompleted && takeoffConfig()->targetHeadingDeg >= 0) {
                     takeoffState.state = TAKEOFF_STATE_ROTATING;
                     takeoffState.startHeadingDeg = attitude.values.yaw / 10.0f;
                     takeoffState.targetHeadingDeg = takeoffConfig()->targetHeadingDeg;
@@ -142,6 +147,7 @@ static void takeoffProcessTransitions(void)
                 // Если курс достигнут (в пределах 5 градусов)
                 if (fabsf(headingError) < 5.0f) {
                     takeoffState.state = TAKEOFF_STATE_CLIMBING;
+                    takeoffState.rotationCompleted = true; // Помечаем, что поворот завершён
                 }
             }
             
@@ -182,6 +188,9 @@ static void takeoffUpdate(void)
         
         // Устанавливаем угол в сантиградусах для pid.c
         takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
+        
+        // Сбрасываем yaw rate после завершения поворота
+        takeoffState.desiredYawRate = 0.0f;
         
     } else if (takeoffState.state == TAKEOFF_STATE_ROTATING) {
         // Во время поворота pitch остаётся нулевым
