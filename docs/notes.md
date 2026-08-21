@@ -228,3 +228,18 @@ repair file (untrunc - good - bad)
 Идентификатор маяка 3
 Темп речи: 1150
 Порог включения сирены и вспышки: 50
+
+Потому что в Betaflight нет единого "газа". Есть три независимые переменные, и takeoff переопределяет только одну:
+Переменная	Где задаётся	Кто читает	Takeoff влияет?
+rcData[THROTTLE]	rx.c — сырой PWM 1000-2000	calculateThrottleStatus, calculateThrottlePercent, wasThrottleRaised, motor_stop	НЕТ — неизменна
+rcCommand[THROTTLE]	rc.c:737 — со scaling/expo	alt_hold stick adjust, telemetry, blackbox	НЕТ — takeoff её не трогает
+throttle (static в mixer.c)	mixer.c — 0.0-1.0	TPA, anti-gravity, dyn-LPF, motor mix	ДА — но только в одной точке
+Это архитектурный долг: Betaflight проектировался с допущением "стик газа = реальный газ". Автопилоты (alt_hold, gps_rescue, takeoff) переопределяют только mixer'овскую throttle, а ~10 других подсистем продолжают читать rcData[THROTTLE] напрямую.
+Поэтому при стике=0 и takeoff=60:
+- TPA видит 0 → PIDs на полной мощности
+- calculateThrottleStatus видит 0 → может отключить стабилизацию
+- disarmOnImpact видит 0 → детектит "посадку"
+- wasThrottleRaised видит 0 → airmode не активируется
+- motor_stop видит 0 → глушит моторы
+Почему alt_hold работает: требует wasThrottleRaised() — пилот уже летит на ~50%, расхождение минимально. Плюс не задаёт pitch angle, поэтому даже PIDs на полной мощности просто удерживают горизонт.
+Правильный архитектурный фикс — ввести единый effectiveThrottle (как в ArduPilot/PX4), который все подсистемы читают вместо сырого стика. Но это крупный рефакторинг. Текущие точечные исправления — pragmatic workaround.

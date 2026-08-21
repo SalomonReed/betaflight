@@ -191,7 +191,7 @@ def main():
             
             controller.send_rc()
             controller.print_status()
-            time.sleep(0.01)  # 50 Hz update rate
+            time.sleep(0.001)  # 50 Hz update rate
             
     except KeyboardInterrupt:
         print("\n\nInterrupted")

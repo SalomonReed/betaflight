@@ -209,8 +209,7 @@ static void takeoffUpdate(void)
         }
         
         // Отладочная информация
-        DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(currentHeadingDeg * 10.0f));  // текущий курс * 10
-        DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(headingError * 10.0f));       // ошибка курса * 10
+        // DEBUG_SET for heading/yawRate removed — slots 3/4/5 now used by mixer.c/pid.c
         
         // Вычисляем желаемую скорость вращения
         const float yawRate = takeoffConfig()->yawRate;
@@ -233,8 +232,6 @@ static void takeoffUpdate(void)
             takeoffState.desiredYawRate = 0.0f;
         }
         
-        DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.desiredYawRate));  // желаемый yaw rate
-        
     } else if (takeoffState.state == TAKEOFF_STATE_HOLDING) {
         // Поддерживаем последний угол тангажа
         takeoffAngle[FD_PITCH] = takeoffState.currentPitchAngleDeg * 100.0f;
@@ -253,18 +250,16 @@ void updateTakeoff(timeUs_t currentTimeUs)
     takeoffProcessTransitions();
     // Отладочный вывод - всегда обновляется независимо от состояния
     // debug[0]: состояние takeoff (0=IDLE, 1=ARMED, 2=CLIMBING, 3=ROTATING, 4=HOLDING)
-    // debug[1]: целевая высота (см)
-    // debug[2]: takeoff_throttle из конфига
-    // debug[3]: Throttle из mixer.c
-    // debug[4]: текущий курс (градусы)
-    // debug[5]: целевой курс (градусы)
+    // debug[1]: final throttle после mixer adjustment (×1000) — из mixer.c
+    // debug[2]: bitmap (bit0=airmode, bit1=takeoffActive, bit2=throttleHigh) — из mixer.c
+    // debug[3]: throttle после takeoff override (×100) — из mixer.c
+    // debug[4]: pidStabilisationEnabled (1=ON, 0=OFF) — из pid.c
+    // debug[5]: zeroThrottleItermReset (1=reset, 0=no) — из pid.c
+    // debug[6]: motorMixMax (PID output max, ×1000) — из mixer.c
+    // debug[7]: upper limit (1.0 - normalizedMotorMixMax, ×1000) — из mixer.c
 
 
     DEBUG_SET(DEBUG_TAKEOFF, 0, takeoffState.state);
-    DEBUG_SET(DEBUG_TAKEOFF, 1, lrintf(takeoffState.targetAltitudeCm));
-    DEBUG_SET(DEBUG_TAKEOFF, 2, takeoffConfig()->takeoffThrottle);
-    DEBUG_SET(DEBUG_TAKEOFF, 4, lrintf(attitude.values.yaw / 10.0f));
-    DEBUG_SET(DEBUG_TAKEOFF, 5, lrintf(takeoffState.targetHeadingDeg));
     
     if (takeoffState.state == TAKEOFF_STATE_CLIMBING || 
         takeoffState.state == TAKEOFF_STATE_ROTATING || 

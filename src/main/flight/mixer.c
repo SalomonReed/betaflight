@@ -690,6 +690,19 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     // Find min and max throttle based on conditions. Throttle has to be known before mixing
     calculateThrottleAndCurrentMotorEndpoints(currentTimeUs);
 
+#ifdef USE_TAKEOFF
+    // Throttle override for takeoff mode — must be applied BEFORE TPA/anti-gravity/dyn-lpf
+    // so that throttle-dependent PID scaling uses the actual motor throttle, not the stick value
+    if (FLIGHT_MODE(TAKEOFF_MODE)) {
+        if (isTakeoffActive()) {
+            throttle = getTakeoffThrottle();
+        } else {
+            throttle = 0.0f;
+        }
+        DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(throttle * 100));
+    }
+#endif
+
     if (applyCrashFlipModeToMotors()) {
         return;
         // if crash flip modeis being applied to the motors, mixing is done
@@ -790,21 +803,6 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
     }
 
     //  The following fixed throttle values will not be shown in the blackbox log
-#ifdef USE_TAKEOFF
-    // Throttle value to be used during takeoff mode
-    // This must be checked BEFORE other throttle overrides
-    if (FLIGHT_MODE(TAKEOFF_MODE)) {
-        if (isTakeoffActive()) {
-            // Use fixed throttle from takeoff config
-            throttle = getTakeoffThrottle();
-        } else {
-            // Takeoff mode active but takeoff not started yet - block throttle from stick
-            throttle = 0.0f;
-        }
-        DEBUG_SET(DEBUG_TAKEOFF, 3, lrintf(throttle * 100));
-    }
-#endif
-
 #ifdef USE_YAW_SPIN_RECOVERY
     // 50% throttle provides the maximum authority for yaw recovery when airmode is not active.
     // When airmode is active the throttle setting doesn't impact recovery authority.
@@ -859,7 +857,7 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs)
         && ARMING_FLAG(ARMED)
         && !mixerRuntime.feature3dEnabled
         && !airmodeEnabled
-        && !FLIGHT_MODE(GPS_RESCUE_MODE | ALT_HOLD_MODE | POS_HOLD_MODE)   // disable motor_stop while GPS Rescue / Alt Hold / Pos Hold is active
+        && !FLIGHT_MODE(GPS_RESCUE_MODE | ALT_HOLD_MODE | POS_HOLD_MODE | TAKEOFF_MODE)   // disable motor_stop while GPS Rescue / Alt Hold / Pos Hold / Takeoff is active
         && (rcData[THROTTLE] < rxConfig()->mincheck)) {
         applyMotorStop();
     } else {

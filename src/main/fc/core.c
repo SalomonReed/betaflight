@@ -63,6 +63,7 @@
 #include "flight/gps_rescue.h"
 #include "flight/alt_hold.h"
 #include "flight/pos_hold.h"
+#include "flight/takeoff.h"
 
 #if defined(USE_DYN_NOTCH_FILTER)
 #include "flight/dyn_notch_filter.h"
@@ -841,7 +842,7 @@ bool processRx(timeUs_t currentTimeUs)
 
     // Note: If Airmode is enabled, on arming, iTerm and PIDs will be off until throttle exceeds the threshold (OFF while disarmed)
     // If not, iTerm will be off at low throttle, with pidStabilisationState determining whether PIDs will be active
-    if (ARMING_FLAG(ARMED) && (isAirmodeActive || throttleActive || launchControlActive || isFixedWing())) {
+    if (ARMING_FLAG(ARMED) && (isAirmodeActive || throttleActive || launchControlActive || isTakeoffActive() || isFixedWing())) {
         pidSetItermReset(false);
         pidStabilisationState(PID_STABILISATION_ON);
     } else {
@@ -1224,6 +1225,9 @@ static FAST_CODE_NOINLINE void subTaskPidController(timeUs_t currentTimeUs)
         && !crashFlipModeActive
         && !runawayTakeoffTemporarilyDisabled
         && !FLIGHT_MODE(GPS_RESCUE_MODE)   // disable Runaway Takeoff triggering if GPS Rescue is active
+#ifdef USE_TAKEOFF
+        && !FLIGHT_MODE(TAKEOFF_MODE)      // disable Runaway Takeoff triggering if Takeoff is active
+#endif
         // check that motors are running
         && (!featureIsEnabled(FEATURE_MOTOR_STOP) || isAirmodeEnabled() || (calculateThrottleStatus() != THROTTLE_LOW))) {
 

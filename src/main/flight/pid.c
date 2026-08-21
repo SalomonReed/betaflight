@@ -959,6 +959,10 @@ static FAST_CODE_NOINLINE void disarmOnImpact(void)
             // or, in altitude hold mode, where throttle can be non-zero
             || FLIGHT_MODE(ALT_HOLD_MODE)
 #endif
+#ifdef USE_TAKEOFF
+            // or, in takeoff mode, where throttle can be non-zero
+            || FLIGHT_MODE(TAKEOFF_MODE)
+#endif
         )) {
         // increase sensitivity by 50% when low and in altitude hold or failsafe landing
         // for more reliable disarm with gentle controlled landings
